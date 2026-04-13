@@ -1,0 +1,133 @@
+#!/bin/bash
+# Wrapper that filters out Apple-clang-only flags before invoking Bloomberg p2996 clang++.
+# Used as CPLUSPLUS build setting in xcodebuild so the rest of Xcode's tooling
+# (mig, swift, ld, metal, ...) keeps using Apple's defaults.
+#
+# Objective-C and Objective-C++ compilations are forwarded to Apple's clang,
+# because they depend on @import Foundation; / Apple modules that the
+# Bloomberg clang sysroot doesn't have set up.
+
+REAL=/Users/$USER/clang-p2996/build/bin/clang
+APPLE=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+
+# Apple swiftToCxx headers (e.g. _SwiftCxxInteroperability.h) live here. They
+# are picked up automatically by Apple's clang via the toolchain root, but
+# Bloomberg's clang doesn't know about that path, so inject it explicitly.
+APPLE_SWIFT_INCLUDE=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift
+
+## Use Bloomberg's clang for all first-party translation units, including
+## Objective-C/C++. ThirdParty/* sources are delegated to Apple's clang:
+## they're vendored libraries (libwebrtc, ANGLE, gtest, ...) compiled with
+## -Werror, and we don't want to maintain warning-clean builds against an
+## upstream clang fork.
+is_thirdparty=0
+for a in "$@"; do
+    case "$a" in
+        */Source/ThirdParty/*) is_thirdparty=1; break ;;
+    esac
+done
+
+if (( is_thirdparty )); then
+    # Expand @response.resp files inline and strip flags Apple clang rejects
+    # (notably -freflection-latest, which lives in those response files).
+    apple_args=()
+    expand_one() {
+        local arg="$1"
+        if [[ "$arg" == @* ]]; then
+            local respfile="${arg:1}"
+            if [[ -f "$respfile" ]]; then
+                # Tokenize the response file (whitespace-separated, supports
+                # backslash escapes for spaces — same as clang's parser).
+                local tmp
+                while IFS= read -r tmp; do
+                    expand_one "$tmp"
+                done < <(xargs -n1 < "$respfile")
+                return
+            fi
+        fi
+        case "$arg" in
+            -freflection-latest) ;;
+            *) apple_args+=("$arg") ;;
+        esac
+    }
+    for a in "$@"; do
+        expand_one "$a"
+    done
+    exec "$APPLE" "${apple_args[@]}"
+fi
+
+## Expand any @response.resp args inline so we can filter flags Bloomberg
+## clang doesn't accept (or that we need to suppress like -fmodules) even
+## when they were placed inside an Xcode-generated response file.
+flat=()
+flatten_one() {
+    local arg="$1"
+    if [[ "$arg" == @* ]]; then
+        local respfile="${arg:1}"
+        if [[ -f "$respfile" ]]; then
+            local tok
+            while IFS= read -r tok; do
+                flatten_one "$tok"
+            done < <(xargs -n1 < "$respfile")
+            return
+        fi
+    fi
+    flat+=("$arg")
+}
+for a in "$@"; do
+    flatten_one "$a"
+done
+
+args=()
+skip=0
+for a in "${flat[@]}"; do
+    if (( skip > 0 )); then
+        skip=$(( skip - 1 ))
+        continue
+    fi
+    case "$a" in
+        -ivfsstatcache) skip=1 ;;
+        -fcas-backend|-cas-friendly-debug-info|-fno-odr-hash-protocols) ;;
+        -clang-vendor-feature=*) ;;
+        -mlinker-version=*) ;;
+        -Wno-elaborated-enum-base) ;;
+        # Drop -fmodules so the wrapper-appended -fno-modules sticks. Apple
+        # clang reports __has_feature(modules)==0 in C++ TUs that pass
+        # `-fmodules -fno-cxx-modules`, but Bloomberg's clang doesn't
+        # (HM stays 1), which leaves WebKit headers gated on
+        # `#if !__has_feature(modules)` skipped — see CoreMediaSPI.h.
+        -fmodules|-fcxx-modules) ;;
+        # Upgrade the C++ standard to c++2c so reflection is available even
+        # though the project xcconfigs still pin c++2b for Apple clang.
+        -std=c++2b|-std=c++23) args+=(-std=c++2c) ;;
+        *) args+=("$a") ;;
+    esac
+done
+
+# Filter -Xclang <arg> pairs
+filtered=()
+i=0
+n=${#args[@]}
+while (( i < n )); do
+    if [[ "${args[$i]}" == "-Xclang" ]]; then
+        i=$(( i + 2 ))
+        continue
+    fi
+    filtered+=("${args[$i]}")
+    i=$(( i + 1 ))
+done
+
+# Apple clang treats `-fmodules -fno-cxx-modules` as making
+# `__has_feature(modules)` evaluate to 0 inside C++ TUs. Bloomberg's clang
+# only consumes the driver-level `-fno-cxx-modules` and reports it as 1,
+# which leaves WebKit headers gated on `#if !__has_feature(modules)` (e.g.
+# CoreMediaSPI.h) skipping their declarations. Passing `-fno-cxx-modules`
+# via -Xclang routes it to cc1 directly, which DOES clear LangOpts.Modules.
+# Inject reflection + relax unused-arg diagnostics here so the project
+# xcconfigs don't need to know about Bloomberg-specific flags.
+exec "$REAL" \
+    -fno-modules -Xclang -fno-cxx-modules \
+    -freflection-latest \
+    -Qunused-arguments \
+    -isystem "$APPLE_SWIFT_INCLUDE" \
+    "${filtered[@]}"
