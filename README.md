@@ -11,7 +11,7 @@ git clone  https://github.com/bloomberg/clang-p2996.git /Users/$USER/clang-p2996
 cd /Users/$USER/clang-p2996
 git checkout p2996
 cmake -G Ninja -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" -DCMAKE_INSTALL_PREFIX=/Users/$USER/clang-p2996/install
-
+ninja -C build
 ```
 
 Build WebKit:
