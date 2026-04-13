@@ -2,12 +2,12 @@ MacOS p2996 (CPP26 reflection) bloomberg toolchain:
 
 Clone this repo to:
 ```
-git clone /Users/$USER/Library/Developer/Toolchains/p2996.xctoolchain/
+git clone git@github.com:justinmichaud/p2996.xctoolchain.git /Users/$USER/Library/Developer/Toolchains/p2996.xctoolchain/
 ```
 
 Clone bloomberg:
 ```
-git clone https://github.com/bloomberg/clang-p2996.git /Users/$USER/clang-p2996
+git clone  https://github.com/bloomberg/clang-p2996.git /Users/$USER/clang-p2996
 cd /Users/$USER/clang-p2996
 git checkout p2996
 cmake -G Ninja -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" -DCMAKE_INSTALL_PREFIX=/Users/$USER/clang-p2996/install
