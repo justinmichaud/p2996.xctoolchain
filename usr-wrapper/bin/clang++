@@ -7,7 +7,7 @@
 # because they depend on @import Foundation; / Apple modules that the
 # Bloomberg clang sysroot doesn't have set up.
 
-REAL=/Users/justinmichaud/Development/DebugVersion/clang-p2996/build/bin/clang++
+REAL=/Users/$USER/clang-p2996/build/bin/clang++
 APPLE=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++
 
 # Apple swiftToCxx headers (e.g. _SwiftCxxInteroperability.h) live here. They

@@ -3,6 +3,8 @@ MacOS p2996 (CPP26 reflection) bloomberg toolchain:
 Clone this repo to:
 ```
 git clone git@github.com:justinmichaud/p2996.xctoolchain.git /Users/$USER/Library/Developer/Toolchains/p2996.xctoolchain/
+cd /Users/$USER/Library/Developer/Toolchains/p2996.xctoolchain/
+ln -s /Users/$USER/clang-p2996 usr
 ```
 
 Clone bloomberg:
