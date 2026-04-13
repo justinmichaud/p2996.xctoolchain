@@ -16,5 +16,5 @@ ninja -C build
 
 Build WebKit:
 ```
-Tools/Scripts/build-webkit --release --export-compile-commands COMPILATION_CACHE_ENABLE_CACHING=NO CLANG_ENABLE_EXPLICIT_MODULES=NO _EXPERIMENTAL_SWIFT_EXPLICIT_MODULES=NO ENABLE_WK_LIBRARY_MODULE_VERIFIER=NO OVERRIDE_ENABLE_MODULE_VERIFIER=NO ENABLE_MODULE_VERIFIER=NO CPLUSPLUS=/Users/$USER/Library/Developer/Toolchains/p2996.xctoolchain/usr-wrapper/bin/clang++ 2>&1 | tee /tmp/xc-build39.log | tail -10
+Tools/Scripts/build-webkit --release --export-compile-commands COMPILATION_CACHE_ENABLE_CACHING=NO CLANG_ENABLE_EXPLICIT_MODULES=NO _EXPERIMENTAL_SWIFT_EXPLICIT_MODULES=NO ENABLE_WK_LIBRARY_MODULE_VERIFIER=NO OVERRIDE_ENABLE_MODULE_VERIFIER=NO ENABLE_MODULE_VERIFIER=NO CPLUSPLUS=/Users/$USER/Library/Developer/Toolchains/p2996.xctoolchain/usr-wrapper/bin/clang++
 ```
